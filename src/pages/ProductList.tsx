@@ -2,37 +2,57 @@ import { useEffect, useState } from "react";
 import styles from "./ProductList.module.css";
 import { Link } from "react-router";
 
-function ProductList() {
-    // 사용자가 "/" 주소로 들어왔을 때 뜨는 컴포넌트 => 사용자가 목록을 보고 싶어하는 상황
-    // 목록을 띄워주기 위해 목록 데이터를 백엔드에게 요청
-    // 받아 와서 가공하고 state에 저장한 뒤
-    // 화면에 띄우면 끝
+// 그러면, 매 백엔드 요청을 보내서 데이터를 받아올 때
+// 이 모든 내용들을 타입으로 지정해서 써야 되는가?
+export type Product = {
+    id: number;
+    title: string;
+    price: number;
+    thumbnail: string;
+    description: string;
+    category: string;
+    rating: number;
+};
 
-    const [list, setList] = useState([]);
+type ApiResponse = {
+    products: Product[];
+};
+
+function ProductList() {
+    //     list의 타입은?     초기값으로 array가 들어갔으니 타입 array
+    //     배열이라는 타입은 무언가 데이터 덩어리를 여러개 가질 수 있다는 타입
+    //     any[]     (X)    => 확실한 걸로 추론이 가능하지, 가능성을 갖고 추론을 해주지 않음
+    //     never[]   (O)
+    //     배열 값을 변수나 state에 사용한다면, 꼭 타입 명시가 필요함
+    const [list, setList] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         fetch("https://dummyjson.com/products?limit=12")
             .then(res => {
+                // 백엔드에게 받아서 온 내용이 담긴 res엔 모든 내용이 다 담겨있음
+                // 모든 내용을 가공 처리함
                 return res.json();
             })
-            .then(json => {
+            .then((json: ApiResponse) => {
+                // 모든 내용을 가공한 결과물이 json으로 옴
+                // 그걸 Product[]의 자리에 저장하려고 하니까
+                // Product 타입의 property 값만 남기고 나머지는 다 버림
                 setList(json.products);
-                setLoading(false);
             })
-            .catch(error => {
-                console.log(error);
-                setLoading(false);
-            });
+            .catch((error: unknown) => {
+                if (error instanceof Error) {
+                    console.log(error.message);
+                } else {
+                    console.log(error);
+                }
+            })
+            .finally(() => setLoading(false));
     }, []);
 
     if (loading) {
         return <div className={styles.loading}>LOADING...</div>;
     }
-
-    // loading은 끝났고(false),
-    // 백엔드에게 받아온 데이터가 정상적으로 list에 저장이 된 경우
-    // fetch 중간에 에러가 있어서 list에 저장이 안된 경우
 
     if (list.length === 0) {
         return <div className={styles.loading}>상품을 찾을 수 없거나, 오류가 발생 되었습니다.</div>;
